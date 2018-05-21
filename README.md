@@ -5,7 +5,8 @@ This repository contains code for a neural network written from scratch. All der
 So far the network includes:
   - Batch Norm
   - Adam Optimizer
-  -Logistic regression loss function
+  - Logistic regression loss function
+  
   
 To be added:
   - Dropout
