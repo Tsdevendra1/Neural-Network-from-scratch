@@ -7,16 +7,11 @@ So far the network includes:
   - Adam Optimizer
   -Logistic regression loss function
   
-So far the network includes:
-  - Batch Norm
-  - Adam Optimizer
-  -Logistic regression loss function
-  
 To be added:
-  -Dropout
-  -Residual learning
-  -Sigmoid loss function
-  -RSS loss function
-  
+  - Dropout
+  - Residual Learning
+  - Sigmoid loss function
+  - RSS loss function
+    
 The network has only been evaluated to approximate the XOR function. 
   
