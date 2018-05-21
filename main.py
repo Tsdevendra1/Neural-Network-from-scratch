@@ -24,7 +24,7 @@ class Model:
                  num_epochs, layer_sizes):
 
         # Data
-        self.x_train = train_data  
+        self.x_train = train_data  # REMEMBER YOU WANT THIS TO CONTAIN TEST DATA AS WELL
         self.y_train = train_labels
         self.x_test = test_data
         self.y_test = test_labels
@@ -151,13 +151,11 @@ class Model:
             self.parameters['moment2_{}'.format(variable_name)] = \
                 (beta2 * self.parameters['moment2_{}'.format(variable_name)]) + ((1 - beta2) * np.power(gradient, 2))
 
-    def create_layer(self, input_matrix, weights_matrix, bias_matrix, use_sigmoid=False, batch_norm=False):
+    def create_layer(self, input_matrix, weights_matrix, bias_matrix, gamma=None, beta=None, use_sigmoid=False, batch_norm=False):
 
         z = np.dot(input_matrix, weights_matrix) + bias_matrix
 
         if batch_norm is True:
-            gamma = self.parameters['gamma1']
-            beta = self.parameters['beta1']
             z, cache = self.batchnorm_forward(z, gamma, beta)
 
         if use_sigmoid is True:
@@ -236,37 +234,51 @@ class Model:
     def calc_gradients(self, data_batch, labels_batch, n_examples, batch_norm):
 
         if batch_norm is True:
-            prediction, a1, cache = self.predict(data_batch, optimise=True)
+            prediction, a1, cache1, a2, cache2 = self.predict(data_batch, optimise=True)
 
             # Compute gradients last layer
-            dZ2 = prediction - labels_batch
-            dW2 = np.dot(prediction.T, dZ2)
-            dB2 = np.sum(dZ2) * (1 / n_examples)
+            dZ3 = prediction - labels_batch
+            dW3 = np.dot(prediction.T, dZ3)
+            dB3 = np.sum(dZ3) * (1 / n_examples)
 
             # Compute gradients for batch norm
-            dY = np.dot(dZ2, self.parameters['w2'].T) * self.sigmoid_gradient(a1)
-            dZ1, dgamma, dbeta = self.batchnorm_backward(dY, cache)
-
-            # Compute gradients second layer
-            dW1 = np.dot(data_batch.T, dZ1)
-            dB1 = np.sum(dZ1, axis=0) * (1 / n_examples)
-
-            gradients_dict = {'w1': dW1, 'w2': dW2, 'b1': dB1, 'b2': dB2, 'beta1': dbeta, 'gamma1': dgamma}
-
-        elif batch_norm is False:
-            prediction, a1 = self.predict(data_batch, optimise=True)
+            dY2 = np.dot(dZ3, self.parameters['w3'].T) * self.sigmoid_gradient(a2)
+            dZ2, dgamma2, dbeta2 = self.batchnorm_backward(dY2, cache2)
 
             # Compute gradients first layer
-            dZ2 = prediction - labels_batch
-            dW2 = np.dot(prediction.T, dZ2)
-            dB2 = np.sum(dZ2) * (1 / n_examples)
+            dW2 = np.dot(data_batch.T, dZ2)
+            dB2 = np.sum(dZ2, axis=0) * (1 / n_examples)
 
-            # Compute gradients second layer
-            dZ1 = np.dot(dZ2, self.parameters['w2'].T) * self.sigmoid_gradient(a1)
+            # Compute gradients for batch norm
+            dY1 = np.dot(dZ2, self.parameters['w2'].T) * self.sigmoid_gradient(a1)
+            dZ1, dgamma1, dbeta1 = self.batchnorm_backward(dY1, cache1)
+
+            # Compute gradients first layer
             dW1 = np.dot(data_batch.T, dZ1)
             dB1 = np.sum(dZ1, axis=0) * (1 / n_examples)
 
-            gradients_dict = {'w1': dW1, 'w2': dW2, 'b1': dB1, 'b2': dB2}
+            gradients_dict = {'w1': dW1, 'w2': dW2, 'w3': dW3, 'b1': dB1, 'b2': dB2, 'b3': dB3,
+                              'beta1': dbeta1, 'beta2': dbeta2, 'gamma1': dgamma1, 'gamma2': dgamma2}
+
+        elif batch_norm is False:
+            prediction, a1, a2 = self.predict(data_batch, optimise=True)
+
+            # Compute gradients last layer
+            dZ3 = prediction - labels_batch
+            dW3 = np.dot(prediction.T, dZ3)
+            dB3 = np.sum(dZ3) * (1 / n_examples)
+
+            # Compute gradients second layer
+            dZ2 = np.dot(dZ3, self.parameters['w3'].T) * self.sigmoid_gradient(a2)
+            dW2 = np.dot(data_batch.T, dZ3)
+            dB2 = np.sum(dZ2, axis=0) * (1 / n_examples)
+
+            # Compute gradients first layer
+            dZ1 = np.dot(dZ2, self.parameters['w2'].T) * self.sigmoid_gradient(a1)
+            dW1 = np.dot(data_batch.T, dZ2)
+            dB1 = np.sum(dZ1, axis=0) * (1 / n_examples)
+
+            gradients_dict = {'w1': dW1, 'w2': dW2, 'w3': dW3, 'b1': dB1, 'b2': dB2, 'b3': dB3}
 
         return gradients_dict, prediction
 
@@ -277,20 +289,28 @@ class Model:
         b1 = self.parameters['b1']
         w2 = self.parameters['w2']
         b2 = self.parameters['b2']
+        w3 = self.parameters['w3']
+        b3 = self.parameters['b3']
+        gamma1 = self.parameters['gamma1']
+        gamma2 = self.parameters['gamma2']
+        beta1 = self.parameters['beta1']
+        beta2 = self.parameters['beta2']
 
         if batch_norm is True:
             # Define network and prediction
-            a1, cache = self.create_layer(current_batch, w1, b1, use_sigmoid=True, batch_norm=True)  # First layer
-            prediction = self.create_layer(a1, w2, b2, use_sigmoid=True, batch_norm=False)  # Second layer
+            a1, cache1 = self.create_layer(current_batch, w1, b1, gamma1, beta1, use_sigmoid=True, batch_norm=True)  # First layer
+            a2, cache2 = self.create_layer(a1, w2, b2, gamma2, beta2, use_sigmoid=True, batch_norm=True)  # Second layer
+            prediction = self.create_layer(a2, w3, b3, use_sigmoid=True, batch_norm=False)  # Third layer
         else:
             # Define network and prediction
             a1 = self.create_layer(current_batch, w1, b1, use_sigmoid=True)  # First layer
-            prediction = self.create_layer(a1, w2, b2, use_sigmoid=True)  # Second layer
+            a2 = self.create_layer(a1, w2, b2, use_sigmoid=True)
+            prediction = self.create_layer(a2, w3, b3, use_sigmoid=True)  # Second layer
 
         if optimise is True and batch_norm is True:
-            return prediction, a1, cache  # Gives raw values to calculate loss during training
+            return prediction, a1, cache1, a2, cache2  # Gives raw values to calculate loss during training
         if optimise is True and batch_norm is False:
-            return prediction, a1
+            return prediction, a1, a2
         if optimise is False:
             return np.around(prediction)  # Gives values rounded to 0 or 1 to see prediction result on test set
 
@@ -338,7 +358,7 @@ class Model:
 
 
 # Test and Train data
-n_generated = 5000  # How many training examples to be generated
+n_generated = 2000  # How many training examples to be generated
 
 data_train = np.random.randint(2, size=(n_generated, 2))
 labels_train = np.empty((n_generated, 1))
@@ -364,11 +384,11 @@ beta2 = 0.999
 eps = 1e-8
 learning_rate = 0.1
 keep_prob = 0.5
-num_layers = 3
-num_epochs = 125
+num_layers = 4
+num_epochs = 1000
 
 # Architecture for network
-layer_sizes = np.array([[2], [2], [1]])
+layer_sizes = np.array([[2], [2], [2], [1]])
 
 # Initialise model
 model = Model(data_train, labels_train, data_test, labels_test, batch_size, learning_rate, keep_prob, num_layers,
