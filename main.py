@@ -24,7 +24,7 @@ class Model:
                  num_epochs, layer_sizes):
 
         # Data
-        self.x_train = train_data  # REMEMBER YOU WANT THIS TO CONTAIN TEST DATA AS WELL
+        self.x_train = train_data  
         self.y_train = train_labels
         self.x_test = test_data
         self.y_test = test_labels
